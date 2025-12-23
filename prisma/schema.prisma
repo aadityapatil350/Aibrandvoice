@@ -1,0 +1,565 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
+}
+
+model User {
+  id                    String   @id @default(uuid())
+  email                 String   @unique
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations for multi-platform content optimization tools
+  platformConfigs       PlatformConfig[]
+  thumbnailGenerations  ThumbnailGeneration[]
+  seoOptimizations      SeoOptimization[]
+  hashtagSets           HashtagSet[]
+
+  // Brand Profile relations
+  brandProfiles         BrandProfile[]
+  voiceTrainings        VoiceTraining[]
+
+  // Universal Content Optimizer relations
+  contentOptimizations  ContentOptimization[]
+  savedGenerations      SavedGeneration[]
+
+  @@map("users")
+}
+
+// Enums for multi-platform content optimization tools
+enum PlatformType {
+  YOUTUBE
+  INSTAGRAM
+  TIKTOK
+  LINKEDIN
+  TWITTER
+  BLOG
+  GENERIC
+}
+
+enum GenerationStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// Platform Configuration Models
+model Platform {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  displayName String
+  icon        String
+  color       String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  configs     PlatformConfig[]
+  thumbnailTemplates ThumbnailTemplate[]
+  thumbnailGenerations ThumbnailGeneration[]
+  seoOptimizations SeoOptimization[]
+  seoKeywords  SeoKeyword[]
+  hashtagSets HashtagSet[]
+  hashtags    Hashtag[]
+  
+  @@index([isActive])
+  @@map("platforms")
+}
+
+model PlatformConfig {
+  id          String   @id @default(uuid())
+  platformId  String
+  userId      String?
+  configType  String   // 'thumbnail', 'seo', 'hashtags', 'general'
+  settings    Json     // Platform-specific settings
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  platform    Platform @relation(fields: [platformId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@index([platformId])
+  @@index([userId])
+  @@index([configType])
+  @@map("platform_configs")
+}
+
+// AI Thumbnail Generator Models
+model ThumbnailTemplate {
+  id          String   @id @default(uuid())
+  name        String
+  platformId  String
+  dimensions  Json     // {width: 1920, height: 1080}
+  overlays    Json[]   // Array of overlay configurations
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  platform    Platform @relation(fields: [platformId], references: [id], onDelete: Cascade)
+  generations ThumbnailGeneration[]
+  
+  @@index([platformId])
+  @@index([isActive])
+  @@index([isDefault])
+  @@map("thumbnail_templates")
+}
+
+model ThumbnailGeneration {
+  id            String   @id @default(uuid())
+  userId        String
+  platformId    String
+  templateId    String?
+  contentType   String   // video, blog, social, etc.
+  title         String
+  description   String?
+  prompt        String
+  dimensions    Json     // {width: 1920, height: 1080}
+  overlays      Json[]   // Array of overlay configurations
+  imageUrl      String?
+  thumbnailUrl  String?
+  status        GenerationStatus
+  metadata      Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform      Platform @relation(fields: [platformId], references: [id], onDelete: Cascade)
+  template      ThumbnailTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  overlayConfigs ThumbnailOverlay[]
+  
+  @@index([userId])
+  @@index([platformId])
+  @@index([templateId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("thumbnail_generations")
+}
+
+model ThumbnailOverlay {
+  id            String   @id @default(uuid())
+  generationId  String
+  type          String   // text, image, logo, watermark
+  position      Json     // {x: 100, y: 100}
+  size          Json     // {width: 200, height: 50}
+  style         Json?    // Style configuration
+  content       Json?    // Content configuration
+  zIndex        Int      @default(1)
+  isVisible     Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  generation    ThumbnailGeneration @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  
+  @@index([generationId])
+  @@index([type])
+  @@map("thumbnail_overlays")
+}
+
+// Title & Description SEO Optimizer Models
+model SeoOptimization {
+  id              String   @id @default(uuid())
+  userId          String
+  platformId      String
+  contentType     String
+  originalTitle   String?
+  originalDesc    String?
+  optimizedTitle  String
+  optimizedDesc   String
+  keywords        String[]
+  seoScore        Float?
+  characterCount  Json     // {title: 50, description: 200}
+  variations      Json[]   // A/B test variations
+  performance     Json?    // Performance metrics
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform        Platform @relation(fields: [platformId], references: [id], onDelete: Cascade)
+  keywordAnalysis SeoKeyword[]
+  performanceData SeoPerformance[]
+  
+  @@index([userId])
+  @@index([platformId])
+  @@index([contentType])
+  @@index([createdAt])
+  @@map("seo_optimizations")
+}
+
+model SeoKeyword {
+  id            String   @id @default(uuid())
+  keyword       String
+  platformId    String
+  optimizationId String?
+  competition   String   // low, medium, high
+  volume        Int?
+  difficulty    Float?
+  trend         String   // rising, stable, declining
+  lastUpdated   DateTime @default(now())
+  
+  // Relations
+  platform      Platform @relation(fields: [platformId], references: [id], onDelete: Cascade)
+  optimization  SeoOptimization? @relation(fields: [optimizationId], references: [id], onDelete: SetNull)
+  
+  @@unique([keyword, platformId])
+  @@index([platformId])
+  @@index([competition])
+  @@index([trend])
+  @@map("seo_keywords")
+}
+
+model SeoPerformance {
+  id            String   @id @default(uuid())
+  optimizationId String
+  metric        String   // views, clicks, engagement, etc.
+  value         Float
+  platform      String   // Source platform for analytics
+  date          DateTime
+  metadata      Json?
+  
+  // Relations
+  optimization  SeoOptimization @relation(fields: [optimizationId], references: [id], onDelete: Cascade)
+  
+  @@index([optimizationId])
+  @@index([metric])
+  @@index([date])
+  @@map("seo_performance")
+}
+
+// Hashtag Generator Models
+model HashtagSet {
+  id          String   @id @default(uuid())
+  userId      String
+  platformId  String
+  contentType String
+  content     String
+  hashtags    String[]
+  categories  Json[]   // Grouped by category
+  trending    String[]
+  niche       String[]
+  performance Json?    // Performance metrics
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform    Platform @relation(fields: [platformId], references: [id], onDelete: Cascade)
+  hashtagData Hashtag[]
+  performanceData HashtagPerformance[]
+  
+  @@index([userId])
+  @@index([platformId])
+  @@index([contentType])
+  @@index([createdAt])
+  @@map("hashtag_sets")
+}
+
+model Hashtag {
+  id          String   @id @default(uuid())
+  hashtag     String
+  setId       String?
+  platformId  String
+  category    String?
+  usage       Int?
+  growth      Float?   // Growth rate
+  isTrending  Boolean  @default(false)
+  lastUpdated DateTime @default(now())
+  
+  // Relations
+  set         HashtagSet? @relation(fields: [setId], references: [id], onDelete: SetNull)
+  platform    Platform @relation(fields: [platformId], references: [id], onDelete: Cascade)
+  performanceData HashtagPerformance[]
+  
+  @@unique([hashtag, platformId])
+  @@index([platformId])
+  @@index([category])
+  @@index([isTrending])
+  @@map("hashtags")
+}
+
+model HashtagPerformance {
+  id          String   @id @default(uuid())
+  hashtagId   String
+  setId       String?
+  metric      String   // reach, engagement, clicks, etc.
+  value       Float
+  platform    String   // Source platform for analytics
+  date        DateTime
+  metadata    Json?
+  
+  // Relations
+  hashtag     Hashtag @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
+  set         HashtagSet? @relation(fields: [setId], references: [id], onDelete: SetNull)
+  
+  @@index([hashtagId])
+  @@index([setId])
+  @@index([metric])
+  @@index([date])
+  @@map("hashtag_performance")
+}
+
+// Brand Profile Models
+enum BrandProfileStatus {
+  DRAFT
+  TRAINING
+  READY
+  ERROR
+}
+
+enum AssetType {
+  PDF
+  DOCX
+  TXT
+  IMAGE
+  AUDIO
+  VIDEO
+}
+
+enum TrainingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model BrandProfile {
+  id                          String             @id @default(uuid())
+  userId                      String
+  name                        String
+  description                 String?
+  industry                    String?
+  targetAudience              String?
+  brandColors                 Json?              // Brand color palette
+  tone                        String[]           // Array of tone attributes
+  voiceModel                  String?            // DeepSeek model identifier
+  status                      BrandProfileStatus @default(DRAFT)
+  trainingProgress            Float              @default(0) // 0-100 percentage
+  lastTrainedAt               DateTime?
+
+  // Advanced fields
+  website                     String?
+  uniqueSellingProposition   String?
+  competitorChannels          String[]           // Array of competitor channel URLs
+  contentPillars              String[]           // Content pillars
+  contentTypeFocus            String[]           // Types of content to focus on
+  targetKeywords              String[]           // SEO keywords
+  communicationStyle          String?
+  formality                   String?            // formal/casual/mixed
+  emotionalTone               String?
+  complexity                  String?            // simple/moderate/complex
+  callToActionStyle           String?            // direct/subtle/none
+  competitorAnalysis          Json?              // Results of competitor analysis
+
+  createdAt                   DateTime           @default(now())
+  updatedAt                   DateTime           @updatedAt
+
+  // Relations
+  user                        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assets                      BrandAsset[]
+  voiceTrainings              VoiceTraining[]
+  contentOptimizations        ContentOptimization[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("brand_profiles")
+}
+
+model BrandAsset {
+  id                String     @id @default(uuid())
+  profileId         String
+  fileName          String
+  originalName      String
+  filePath          String
+  fileSize          Int
+  fileType          AssetType
+  mimeType          String
+  extractedText     String?    // Extracted text from documents
+  uploadedAt        DateTime   @default(now())
+
+  // Relations
+  profile           BrandProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([fileType])
+  @@index([uploadedAt])
+  @@map("brand_assets")
+}
+
+model VoiceTraining {
+  id                String         @id @default(uuid())
+  profileId         String
+  userId            String
+  modelVersion      String         // DeepSeek model version
+  trainingData      Json           // Training parameters and data
+  vectorEmbeddings  Json?          // Voice vector embeddings
+  status            TrainingStatus @default(PENDING)
+  errorMessage      String?
+  trainingStartedAt DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  // Relations
+  profile           BrandProfile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("voice_trainings")
+}
+
+// ============================================================================
+// UNIVERSAL AI CONTENT OPTIMIZER MODELS
+// ============================================================================
+
+enum OptimizationMode {
+  CONTENT_OPTIMIZATION
+  AD_COPY_GENERATION
+}
+
+enum ContentType {
+  POST
+  CAPTION
+  TITLE
+  DESCRIPTION
+  THREAD
+  ARTICLE
+  AD_COPY
+  PRODUCT_DESCRIPTION
+  LANDING_PAGE
+  EMAIL
+  STORY
+  REEL
+  SHORT
+  CAROUSEL
+}
+
+model ContentOptimization {
+  id                  String             @id @default(uuid())
+  userId              String
+  mode                OptimizationMode   @default(CONTENT_OPTIMIZATION)
+  contentType         ContentType
+
+  // Input
+  originalContent     String
+  topic               String?
+  url                 String?
+
+  // Configuration
+  selectedPlatforms   Json               // Array of platform strings
+  goal                String             // reach, engagement, clicks, sales, followers
+  language            String             @default("en")
+  tone                String             // professional, casual, viral, educational, storytelling
+  targetAudience      String?
+  brandProfileId      String?
+
+  // AI Generated Output
+  optimizedResults    Json               // Platform-optimized content with scores
+  suggestions         Json?              // AI suggestions and improvements
+  performanceScore    Float?
+
+  // Ad Copy Specific
+  adFormat           String?            // display, video, social, search, native
+  ctaType            String?            // shop_now, learn_more, sign_up, download, contact
+
+  // Metadata
+  processingTime      Int?               // Processing time in ms
+  status              GenerationStatus   @default(PENDING)
+
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  // Relations
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brandProfile        BrandProfile?      @relation(fields: [brandProfileId], references: [id], onDelete: SetNull)
+  platformContents    PlatformOptimizedContent[]
+
+  @@index([userId])
+  @@index([mode])
+  @@index([contentType])
+  @@index([status])
+  @@index([createdAt])
+  @@map("content_optimizations")
+}
+
+model PlatformOptimizedContent {
+  id                  String             @id @default(uuid())
+  optimizationId      String
+  platform            PlatformType
+  contentType         ContentType
+
+  // Content Output
+  title               String?
+  caption             String?
+  description         String?
+  hashtags            String[]
+  cta                 String?
+  hook                String?
+
+  // Variants (A/B testing)
+  variants            Json?              // Multiple content variations
+
+  // Metrics
+  engagementScore     Float?
+  seoScore            Float?
+  characterCount      Json?              // {title: 50, caption: 200}
+
+  // Platform-specific data
+  platformData        Json?              // Platform-specific fields
+
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  // Relations
+  optimization        ContentOptimization @relation(fields: [optimizationId], references: [id], onDelete: Cascade)
+
+  @@index([optimizationId])
+  @@index([platform])
+  @@index([contentType])
+  @@map("platform_optimized_content")
+}
+
+model SavedGeneration {
+  id                  String             @id @default(uuid())
+  userId              String
+  name                String
+  optimizationId      String?
+
+  // Saved configuration for re-use
+  configuration       Json               // All input parameters
+  results             Json               // Generated results
+
+  // Organization
+  tags                String[]
+  category            String?
+
+  isFavorite          Boolean            @default(false)
+
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  // Relations
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isFavorite])
+  @@index([category])
+  @@index([createdAt])
+  @@map("saved_generations")
+}
