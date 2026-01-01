@@ -1,16 +1,34 @@
-export default function DashboardPage() {
+import { getCurrentUser } from '@/lib/auth-helpers'
+import { prisma } from '@/lib/prisma'
+
+export default async function DashboardPage() {
+  const user = await getCurrentUser()
+
+  // Fetch user stats
+  const brandProfilesCount = await prisma.brandProfile.count({
+    where: { userId: user.id },
+  })
+  const contentOptimizationsCount = await prisma.contentOptimization.count({
+    where: { userId: user.id },
+  })
+  const savedGenerationsCount = await prisma.savedGeneration.count({
+    where: { userId: user.id },
+  })
+
   const quickStats = [
-    { label: 'Brand Profiles', value: '0', icon: '🎨' },
-    { label: 'Content Generated', value: '0', icon: '✨' },
-    { label: 'Scheduled Posts', value: '0', icon: '📅' },
-    { label: 'Platforms Connected', value: '0', icon: '🔗' },
+    { label: 'Brand Profiles', value: brandProfilesCount.toString(), icon: '🎨' },
+    { label: 'Content Generated', value: contentOptimizationsCount.toString(), icon: '✨' },
+    { label: 'Saved Templates', value: savedGenerationsCount.toString(), icon: '📁' },
+    { label: 'Platforms Available', value: '8', icon: '🔗' },
   ]
 
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-claude-text mb-2">Dashboard</h1>
-        <p className="text-claude-text-secondary">Welcome back! Here's your content overview.</p>
+        <h1 className="text-3xl font-bold text-claude-text mb-2">
+          Welcome back, {user.fullName || user.email}!
+        </h1>
+        <p className="text-claude-text-secondary">Here's your content overview.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

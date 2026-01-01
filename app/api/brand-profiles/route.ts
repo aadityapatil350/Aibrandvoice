@@ -16,8 +16,17 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Find the Prisma user by Supabase ID
+    const prismaUser = await prisma.user.findUnique({
+      where: { supabaseId: user.id }
+    })
+
+    if (!prismaUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     const profiles = await prisma.brandProfile.findMany({
-      where: { userId: user.id },
+      where: { userId: prismaUser.id },
       include: {
         assets: {
           select: {
@@ -56,6 +65,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Find the Prisma user by Supabase ID
+    const prismaUser = await prisma.user.findUnique({
+      where: { supabaseId: user.id }
+    })
+
+    if (!prismaUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     const body = await request.json()
     const { name, description, industry, targetAudience, brandColors, tone } = body
 
@@ -67,7 +85,7 @@ export async function POST(request: Request) {
     }
 
     // Create user directory if it doesn't exist
-    const userDir = path.join(process.cwd(), '../brandvoice-assets/profiles', user.id)
+    const userDir = path.join(process.cwd(), '../brandvoice-assets/profiles', prismaUser.id.toString())
     try {
       await mkdir(userDir, { recursive: true })
     } catch (error) {
@@ -76,7 +94,7 @@ export async function POST(request: Request) {
 
     const profile = await prisma.brandProfile.create({
       data: {
-        userId: user.id,
+        userId: prismaUser.id,
         name,
         description,
         industry,
@@ -87,6 +105,7 @@ export async function POST(request: Request) {
         website: body.website,
         uniqueSellingProposition: body.uniqueSellingProposition,
         competitorChannels: body.competitorChannels || [],
+        inspirationChannels: body.inspirationChannels || [],
         contentPillars: body.contentPillars || [],
         contentTypeFocus: body.contentTypeFocus || [],
         targetKeywords: body.targetKeywords || [],

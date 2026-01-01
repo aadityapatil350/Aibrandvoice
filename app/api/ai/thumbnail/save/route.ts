@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
         title: title || generation.title,
         description: description || generation.description,
         metadata: {
-          ...generation.metadata,
+          ...(generation.metadata as any || {}),
           savedAt: new Date().toISOString(),
           tags: tags || [],
           isPublic

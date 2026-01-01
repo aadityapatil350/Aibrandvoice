@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client'
 import { writeFile, mkdir, readFile } from 'fs/promises'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
-import pdf from 'pdf-parse'
+import pdfParse from 'pdf-parse'
 import mammoth from 'mammoth'
 
 const prisma = new PrismaClient()
@@ -22,11 +22,20 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Find the Prisma user by Supabase ID
+    const prismaUser = await prisma.user.findUnique({
+      where: { supabaseId: user.id }
+    })
+
+    if (!prismaUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     // Verify profile belongs to user
     const profile = await prisma.brandProfile.findFirst({
       where: {
         id: params.id,
-        userId: user.id
+        userId: prismaUser.id
       }
     })
 
@@ -65,11 +74,20 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Find the Prisma user by Supabase ID
+    const prismaUser = await prisma.user.findUnique({
+      where: { supabaseId: user.id }
+    })
+
+    if (!prismaUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     // Verify profile belongs to user
     const profile = await prisma.brandProfile.findFirst({
       where: {
         id: params.id,
-        userId: user.id
+        userId: prismaUser.id
       }
     })
 
@@ -158,7 +176,7 @@ export async function POST(
       if (file.type === 'text/plain') {
         extractedText = buffer.toString('utf-8')
       } else if (file.type === 'application/pdf') {
-        const pdfData = await pdf(buffer)
+        const pdfData = await (pdfParse as any)(buffer)
         extractedText = pdfData.text
       } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         const docxResult = await mammoth.extractRawText({ buffer })

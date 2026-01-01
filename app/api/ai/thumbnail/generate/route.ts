@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
         description,
         prompt: aiPrompt,
         dimensions: finalDimensions,
-        overlays: template?.overlays || [],
+        overlays: (template?.overlays || []) as any,
         status: 'PENDING',
         metadata: {
           style,

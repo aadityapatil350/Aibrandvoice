@@ -17,10 +17,19 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Find the Prisma user by Supabase ID
+    const prismaUser = await prisma.user.findUnique({
+      where: { supabaseId: user.id }
+    })
+
+    if (!prismaUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     const profile = await prisma.brandProfile.findFirst({
       where: {
         id: params.id,
-        userId: user.id
+        userId: prismaUser.id
       },
       include: {
         assets: {
@@ -63,6 +72,15 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Find the Prisma user by Supabase ID
+    const prismaUser = await prisma.user.findUnique({
+      where: { supabaseId: user.id }
+    })
+
+    if (!prismaUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     const body = await request.json()
     const { name, description, industry, targetAudience, brandColors, tone } = body
 
@@ -70,7 +88,7 @@ export async function PUT(
     const existingProfile = await prisma.brandProfile.findFirst({
       where: {
         id: params.id,
-        userId: user.id
+        userId: prismaUser.id
       }
     })
 
@@ -94,6 +112,7 @@ export async function PUT(
         website: body.website,
         uniqueSellingProposition: body.uniqueSellingProposition,
         competitorChannels: body.competitorChannels,
+        inspirationChannels: body.inspirationChannels,
         contentPillars: body.contentPillars,
         contentTypeFocus: body.contentTypeFocus,
         targetKeywords: body.targetKeywords,
@@ -136,11 +155,20 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Find the Prisma user by Supabase ID
+    const prismaUser = await prisma.user.findUnique({
+      where: { supabaseId: user.id }
+    })
+
+    if (!prismaUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     // Check if profile exists and belongs to user
     const existingProfile = await prisma.brandProfile.findFirst({
       where: {
         id: params.id,
-        userId: user.id
+        userId: prismaUser.id
       }
     })
 

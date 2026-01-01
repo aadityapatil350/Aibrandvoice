@@ -17,11 +17,20 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Find the Prisma user by Supabase ID
+    const prismaUser = await prisma.user.findUnique({
+      where: { supabaseId: user.id }
+    })
+
+    if (!prismaUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     // Verify profile belongs to user
     const profile = await prisma.brandProfile.findFirst({
       where: {
         id: params.id,
-        userId: user.id
+        userId: prismaUser.id
       },
       include: {
         assets: true
@@ -54,7 +63,7 @@ export async function POST(
     const training = await prisma.voiceTraining.create({
       data: {
         profileId: params.id,
-        userId: user.id,
+        userId: prismaUser.id,
         modelVersion: 'deepseek-chat',
         trainingData: {
           assetCount: textAssets.length,
@@ -112,11 +121,20 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Find the Prisma user by Supabase ID
+    const prismaUser = await prisma.user.findUnique({
+      where: { supabaseId: user.id }
+    })
+
+    if (!prismaUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     // Get latest training for this profile
     const training = await prisma.voiceTraining.findFirst({
       where: {
         profileId: params.id,
-        userId: user.id
+        userId: prismaUser.id
       },
       orderBy: { createdAt: 'desc' }
     })

@@ -924,6 +924,32 @@ PLATFORM: Blog/Website
 - Content: Scannable with headings, bullet points
 - CTA: Read more, Subscribe, Contact, Download
 - Best practices: SEO keywords, internal links, value-driven`,
+
+    REDDIT: `
+PLATFORM: Reddit
+- Title: 80 characters max (critical for clicks - make it intriguing but not clickbait)
+- Post Body: 40,000 characters max for text posts
+- Format: Use proper markdown with headers, bullet points, code blocks
+- Hook: First paragraph must establish credibility and interest
+- Hashtags: Not used on Reddit (use relevant subreddits instead)
+- Engagement: Ask questions, encourage discussion, respond to comments
+- Best practices:
+  - Be authentic and transparent (Redditors spot marketing instantly)
+  - Provide real value, insights, or entertainment
+  - Follow subreddit rules (each community has unique guidelines)
+  - Use TL;DR (Too Long; Didn't Read) summaries for long posts
+  - Include proof/verification when making claims
+  - Engage in comments section after posting
+  - Timing matters: post when target subreddit is most active
+- CTA: Ask thoughtful questions, invite experiences, request feedback
+- Reddit-Specific Formats:
+  - "Casual Conversation": Personal stories, relatable experiences
+  - "Educational/Informative": Deep dives, tutorials, explanations
+  - "Discussion Starter": Hot takes, controversial opinions, questions
+  - "Showcase": Creative work, projects, accomplishments (with proof)
+  - "AMA (Ask Me Anything)": Q&A format (requires verification in relevant subreddits)
+  - "Help/Advice": Seeking or offering guidance
+- Anti-Patterns to Avoid: Overt self-promotion, blog spam, karma farming, reposting`,
   }
 
   const toneGuides: Record<string, string> = {

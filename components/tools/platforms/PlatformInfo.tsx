@@ -3,6 +3,8 @@
  * @fileoverview Information display component showing platform-specific best practices and recommendations
  */
 
+'use client'
+
 import React from 'react';
 import { Platform, PlatformInfoProps } from '@/types/platforms';
 import { getPlatformConfig } from '@/lib/platforms';
@@ -62,7 +64,7 @@ const PlatformInfo: React.FC<PlatformInfoProps> = ({
             <Badge variant="secondary" size={compact ? 'sm' : 'md'}>
               {width} × {height}
             </Badge>
-            <span className={compact ? 'text-xs' : 'text-sm'} text-claude-text-tertiary>
+            <span className={`${compact ? 'text-xs' : 'text-sm'} text-claude-text-tertiary`}>
               pixels
             </span>
           </div>
@@ -144,9 +146,9 @@ const PlatformInfo: React.FC<PlatformInfoProps> = ({
         <h4 className="text-sm font-medium text-claude-text">Hashtag Recommendations</h4>
         <div className="flex items-center space-x-2">
           <Badge variant="secondary" size={compact ? 'sm' : 'md'}>
-            {min}-{max}
+            {min} - {max}
           </Badge>
-          <span className={compact ? 'text-xs' : 'text-sm'} text-claude-text-tertiary>
+          <span className={`${compact ? 'text-xs' : 'text-sm'} text-claude-text-tertiary`}>
             (optimal: {optimal})
           </span>
         </div>
@@ -175,8 +177,8 @@ const PlatformInfo: React.FC<PlatformInfoProps> = ({
               <Badge variant="secondary" size={compact ? 'sm' : 'md'}>
                 {seoSettings.titleLength.optimal}
               </Badge>
-              <span className={compact ? 'text-xs' : 'text-sm'} text-claude-text-tertiary>
-                (range: {seoSettings.titleLength.min}-{seoSettings.titleLength.max})
+              <span className={`${compact ? 'text-xs' : 'text-sm'} text-claude-text-tertiary`}>
+                (range: {seoSettings.titleLength.min} - {seoSettings.titleLength.max})
               </span>
             </div>
           </div>
@@ -191,8 +193,8 @@ const PlatformInfo: React.FC<PlatformInfoProps> = ({
               <Badge variant="secondary" size={compact ? 'sm' : 'md'}>
                 {seoSettings.descriptionLength.optimal}
               </Badge>
-              <span className={compact ? 'text-xs' : 'text-sm'} text-claude-text-tertiary}>
-                (range: {seoSettings.descriptionLength.min}-{seoSettings.descriptionLength.max})
+              <span className={`${compact ? 'text-xs' : 'text-sm'} text-claude-text-tertiary`}>
+                (range: {seoSettings.descriptionLength.min} - {seoSettings.descriptionLength.max})
               </span>
             </div>
           </div>
@@ -250,7 +252,7 @@ const PlatformInfo: React.FC<PlatformInfoProps> = ({
         </div>
         {allowedTags.length > 0 && (
           <div className="mt-2">
-            <span className={compact ? 'text-xs' : 'text-sm'} text-claude-text-tertiary>
+            <span className={`${compact ? 'text-xs' : 'text-sm'} text-claude-text-tertiary`}>
               Allowed tags: {allowedTags.join(', ')}
             </span>
           </div>
@@ -302,7 +304,5 @@ const PlatformInfo: React.FC<PlatformInfoProps> = ({
     </Card>
   );
 };
-
-export default PlatformInfo;
 
 export default PlatformInfo;

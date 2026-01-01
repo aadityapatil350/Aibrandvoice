@@ -1,4 +1,5 @@
-import { Transcript } from 'youtube-transcript-api'
+// import { Transcript } from 'youtube-transcript-api'
+// @ts-ignore - Module not installed, skipping for now
 
 interface ChannelData {
   channelName: string

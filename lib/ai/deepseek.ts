@@ -1,4 +1,4 @@
-export async function generateWithDeepSeek(prompt: string) {
+export async function generateWithDeepSeek(prompt: string, systemPrompt?: string) {
   const apiKey = process.env.DEEPSEEK_API_KEY
 
   if (!apiKey) {
@@ -16,7 +16,7 @@ export async function generateWithDeepSeek(prompt: string) {
       messages: [
         {
           role: 'system',
-          content: 'You are an expert content creator and scriptwriter. Generate engaging, well-structured scripts optimized for different video platforms.'
+          content: systemPrompt || 'You are an expert content creator and social media strategist. Generate engaging, well-structured content optimized for different platforms. Always return valid JSON when requested.'
         },
         {
           role: 'user',
@@ -30,7 +30,7 @@ export async function generateWithDeepSeek(prompt: string) {
 
   if (!response.ok) {
     const error = await response.text()
-    throw new Error(`DeepSeek API error: ${error}`)
+    throw new Error(`DeepSeek API error: ${response.status}: ${error}`)
   }
 
   const data = await response.json()

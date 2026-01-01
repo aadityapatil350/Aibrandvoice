@@ -10,7 +10,17 @@ datasource db {
 
 model User {
   id                    String   @id @default(uuid())
+
+  // Auth fields (synced from Supabase)
+  supabaseId            String   @unique
   email                 String   @unique
+  fullName              String?
+  avatarUrl             String?
+  provider              String?  // google, github, email
+
+  // Profile fields
+  onboardingCompleted   Boolean  @default(false)
+
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
@@ -28,6 +38,11 @@ model User {
   contentOptimizations  ContentOptimization[]
   savedGenerations      SavedGeneration[]
 
+  // YouTube Research relations
+  youtubeVideos         YouTubeVideo[]
+  youtubeChannels        YouTubeChannel[]
+  youtubeFilterPresets  YouTubeFilterPreset[]
+
   @@map("users")
 }
 
@@ -40,6 +55,7 @@ enum PlatformType {
   TWITTER
   BLOG
   GENERIC
+  REDDIT
 }
 
 enum GenerationStatus {
@@ -353,6 +369,7 @@ model BrandProfile {
   website                     String?
   uniqueSellingProposition   String?
   competitorChannels          String[]           // Array of competitor channel URLs
+  inspirationChannels         String[]           @default([]) // Array of inspiration channel URLs
   contentPillars              String[]           // Content pillars
   contentTypeFocus            String[]           // Types of content to focus on
   targetKeywords              String[]           // SEO keywords
@@ -448,6 +465,10 @@ enum ContentType {
   REEL
   SHORT
   CAROUSEL
+  SCRIPT
+  REDDIT_POST
+  REDDIT_COMMENT
+  REDDIT_AMA
 }
 
 model ContentOptimization {
@@ -562,4 +583,389 @@ model SavedGeneration {
   @@index([category])
   @@index([createdAt])
   @@map("saved_generations")
+}
+
+// YouTube Research Models
+model YouTubeVideo {
+  id                String   @id @default(uuid())
+  userId            String
+
+  // Video Data from YouTube API
+  youtubeVideoId    String   @unique
+  title             String
+  description       String?  @db.Text
+  channelId         String
+  channelTitle      String
+  thumbnailUrl      String
+  publishedAt        DateTime
+
+  // Statistics
+  viewCount         Int      @default(0)
+  likeCount         Int      @default(0)
+  commentCount      Int      @default(0)
+  duration          String?  // ISO 8601 duration format
+
+  // Additional Metadata
+  tags              String[]
+  categoryId        String?
+  language          String?
+
+  // Engagement Metrics
+  engagementRate    Float?   // Calculated engagement rate
+
+  // Organization
+  notes             String?  @db.Text
+  tagsCustom        String[] // User-defined tags
+  isFavorite        Boolean  @default(false)
+
+  // Relations
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  savedChannels     YouTubeSavedVideo[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+  @@index([channelId])
+  @@index([publishedAt])
+  @@index([isFavorite])
+  @@map("youtube_videos")
+}
+
+model YouTubeChannel {
+  id                String   @id @default(uuid())
+  userId            String
+
+  // Channel Data from YouTube API
+  channelId         String   @unique
+  title             String
+  description       String?  @db.Text
+  thumbnailUrl       String
+  customUrl         String?
+
+  // Statistics
+  subscriberCount   Int      @default(0)
+  videoCount        Int      @default(0)
+  viewCount         BigInt   @default(0)
+
+  // Channel Metadata
+  country           String?
+  language          String?
+  keywords          String[] // Channel keywords/tags
+  topicCategories   String[] // Channel topic IDs
+
+  // Engagement Metrics
+  engagementRate    Float?   // Average engagement rate
+
+  // Organization
+  notes             String?  @db.Text
+  tagsCustom        String[] // User-defined tags
+  isCompetitor      Boolean  @default(false)
+  isInspirational   Boolean  @default(false)
+
+  // Relation
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  savedVideos       YouTubeSavedVideo[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isCompetitor])
+  @@index([isInspirational])
+  @@index([subscriberCount])
+  @@map("youtube_channels")
+}
+
+model YouTubeSavedVideo {
+  id                String   @id @default(uuid())
+  userId            String
+
+  // Relation to video and channel
+  videoId           String
+  video             YouTubeVideo @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  channelId         String
+  channel           YouTubeChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  // Save context
+  listType          String   // competitor, inspiration, saved, watched
+  notes             String?  @db.Text
+
+  createdAt         DateTime @default(now())
+
+  @@unique([videoId, channelId, listType])
+  @@index([userId])
+  @@index([listType])
+  @@map("youtube_saved_videos")
+}
+
+// ============================================================================
+// TREND TRACKING & NICHE RESEARCH MODELS
+// ============================================================================
+
+model TrendSnapshot {
+  id                String   @id @default(uuid())
+  regionCode        String   // IN, US, GB, etc.
+  categoryId        String?  // YouTube category ID (null = all categories)
+
+  // Snapshot metadata
+  snapshotType      String   // trending, niche_search, channel_analysis
+  queryKeyword      String?  // For niche searches
+  capturedAt        DateTime @default(now())
+
+  // Aggregated metrics
+  totalVideos       Int      @default(0)
+  avgViews          Float    @default(0)
+  avgLikes          Float    @default(0)
+  avgEngagementRate Float    @default(0)
+
+  // Outlier detection results
+  outlierCount      Int      @default(0)
+
+  createdAt         DateTime @default(now())
+
+  // Relations
+  videoMetrics      VideoMetric[]
+
+  @@index([regionCode])
+  @@index([snapshotType])
+  @@index([capturedAt])
+  @@index([regionCode, categoryId])
+  @@map("trend_snapshots")
+}
+
+model VideoMetric {
+  id                String   @id @default(uuid())
+  snapshotId        String
+  youtubeVideoId    String
+
+  // Time-series metrics
+  viewCount         Int
+  likeCount         Int
+  commentCount      Int
+  engagementRate    Float
+
+  // Growth metrics (calculated from previous snapshots)
+  viewsGrowth       Float?   // Percentage growth
+  likesGrowth       Float?
+  engagementGrowth  Float?
+
+  // Velocity metrics (views per hour since publish)
+  viewsPerHour      Float?
+
+  // Outlier detection flags
+  isOutlier         Boolean  @default(false)
+  outlierType       String?  // viral, high_engagement, fast_growing
+  outlierScore      Float?   // How much of an outlier (std devs from mean)
+
+  // Ranking
+  rankPosition      Int?     // Position in trending list
+  percentile        Float?   // Percentile in category
+
+  capturedAt        DateTime @default(now())
+
+  // Relations
+  snapshot          TrendSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([snapshotId, youtubeVideoId])
+  @@index([snapshotId])
+  @@index([youtubeVideoId])
+  @@index([isOutlier])
+  @@index([capturedAt])
+  @@map("video_metrics")
+}
+
+model Niche {
+  id                String   @id @default(uuid())
+  name              String   @unique
+  keywords          String[] // Search keywords for this niche
+  categoryIds       String[] // Related YouTube category IDs
+
+  // Niche metadata
+  description       String?
+  parentNicheId     String?
+
+  // Trend metrics (aggregated from Google Trends)
+  trendScore        Float?   // Current trend interest (0-100)
+  trendDirection    String?  // rising, stable, declining
+  trendHistory      Json?    // Historical trend data
+
+  // Content metrics
+  avgVideoViews     Float?
+  totalChannels     Int      @default(0)
+  competitiveness   String?  // low, medium, high
+
+  // Status
+  isActive          Boolean  @default(true)
+  isTrending        Boolean  @default(false)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  parent            Niche?   @relation("NicheHierarchy", fields: [parentNicheId], references: [id], onDelete: SetNull)
+  children          Niche[]  @relation("NicheHierarchy")
+  nicheSnapshots    NicheSnapshot[]
+
+  @@index([isActive])
+  @@index([isTrending])
+  @@index([trendDirection])
+  @@map("niches")
+}
+
+model NicheSnapshot {
+  id                String   @id @default(uuid())
+  nicheId           String
+
+  // Snapshot data
+  capturedAt        DateTime @default(now())
+  videoCount        Int
+
+  // Metrics
+  avgViews          Float
+  medianViews       Float
+  avgEngagementRate Float
+  topQuartileViews  Float   // 75th percentile
+
+  // Trend detection
+  emergingTopics    String[] // Topics rising in this niche
+  decliningTopics   String[] // Topics declining in this niche
+
+  // Channel insights
+  topChannels       Json?    // Top performing channels
+  newChannels       Json?    // Recently active channels
+
+  // Relations
+  niche             Niche    @relation(fields: [nicheId], references: [id], onDelete: Cascade)
+
+  @@index([nicheId])
+  @@index([capturedAt])
+  @@map("niche_snapshots")
+}
+
+model SearchTrend {
+  id                String   @id @default(uuid())
+  keyword           String
+
+  // Google Trends data
+  interestValue      Int      // 0-100
+  regionCode        String
+  timeframe         String   // today 3-m, today 12-m, etc.
+
+  // Trend analysis
+  trendDirection    String   // rising, stable, declining
+  changePercent     Float?   // Change from previous period
+  peakDate          DateTime?
+
+  // Related data
+  relatedTopics     Json?    // Related topics from Google Trends
+  relatedQueries    Json?    // Related queries from Google Trends
+
+  capturedAt        DateTime @default(now())
+
+  @@unique([keyword, regionCode, timeframe])
+  @@index([keyword])
+  @@index([regionCode])
+  @@index([trendDirection])
+  @@index([capturedAt])
+  @@map("search_trends")
+}
+
+model TrendingTopic {
+  id                String   @id @default(uuid())
+  topic             String
+  nicheId           String?
+
+  // Trend metrics
+  volume            Int      // Search volume or mentions
+  growth            Float    // Growth rate percentage
+  velocity          Float?   // How fast it's growing per day
+
+  // Classification
+  category          String
+  isViral           Boolean  @default(false)
+  isEvergreen       Boolean  @default(false)
+
+  // Content opportunities
+  contentIdeas      Json?    // AI-generated content ideas
+  targetDemographics String[]
+
+  // Source tracking
+  firstSeenAt       DateTime @default(now())
+  lastSeenAt        DateTime @default(now())
+  sourceType        String   // youtube_trending, google_trends, social
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([nicheId])
+  @@index([category])
+  @@index([isViral])
+  @@index([growth])
+  @@map("trending_topics")
+}
+
+model OutlierVideo {
+  id                String   @id @default(uuid())
+  youtubeVideoId    String   @unique
+
+  // Outlier classification
+  outlierType       String   // viral_video, high_engagement, fast_growth, unexpected_hit
+  outlierScore      Float    // Statistical significance (z-score)
+
+  // Context
+  nicheId           String?
+  categoryId        String?
+  regionCode        String
+
+  // Performance compared to niche baseline
+  viewsVsBaseline   Float    // How many times above baseline
+  engagementVsBaseline Float
+
+  // Why it's an outlier
+  detectedReasons   String[] // ["hook in first 3 seconds", "trending topic", "controversy"]
+  keyFactors        Json?    // AI-identified success factors
+
+  // Content analysis
+  titleLength       Int
+  titleEmojis       Boolean
+  hasHowTo          Boolean
+  hasNumber         Boolean
+  thumbnailType     String?  // face, text, comparison, etc.
+
+  // Detection metadata
+  detectedAt        DateTime @default(now())
+  verifiedAt        DateTime?
+
+  // Status
+  isVerified        Boolean  @default(false)
+  isFalsePositive   Boolean  @default(false)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([outlierType])
+  @@index([nicheId])
+  @@index([regionCode])
+  @@index([detectedAt])
+  @@map("outlier_videos")
+}
+
+model YouTubeFilterPreset {
+  id                String   @id @default(uuid())
+  userId            String
+  name              String
+
+  // Filter configuration
+  filters           Json     // Stores all filter settings as JSON
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("youtube_filter_presets")
 }

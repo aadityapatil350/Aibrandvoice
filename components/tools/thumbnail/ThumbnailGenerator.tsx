@@ -3,6 +3,8 @@
  * @fileoverview Main component for the AI Thumbnail Generator tool
  */
 
+'use client'
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { Platform } from '@/types/platforms';
 import { getPlatformConfig } from '@/lib/platforms';

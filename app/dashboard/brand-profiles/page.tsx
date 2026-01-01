@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
-import { Card, CardHeader, CardContent } from '@/components/ui/Card'
+import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/Card'
 import { cn } from '@/lib/utils'
 import AdvancedBrandProfileForm from '@/components/brand-profiles/AdvancedBrandProfileForm'
+import ChannelCard from '@/components/brand-profiles/ChannelCard'
 
 interface BrandProfile {
   id: string
@@ -18,6 +19,19 @@ interface BrandProfile {
   lastTrainedAt?: string
   createdAt: string
   updatedAt: string
+  website?: string
+  uniqueSellingProposition?: string
+  brandColors?: any
+  competitorChannels?: string[]
+  inspirationChannels?: string[]
+  contentPillars?: string[]
+  contentTypeFocus?: string[]
+  targetKeywords?: string[]
+  communicationStyle?: string
+  formality?: string
+  emotionalTone?: string
+  complexity?: string
+  callToActionStyle?: string
   _count: {
     assets: number
   }
@@ -42,7 +56,6 @@ export default function BrandProfilesPage() {
   const [uploadingFile, setUploadingFile] = useState(false)
   const [training, setTraining] = useState<any>(null)
 
-  
   useEffect(() => {
     fetchProfiles()
   }, [])
@@ -54,7 +67,6 @@ export default function BrandProfilesPage() {
     }
   }, [selectedProfile])
 
-  
   const fetchProfiles = async () => {
     try {
       const response = await fetch('/api/brand-profiles')
@@ -81,20 +93,21 @@ export default function BrandProfilesPage() {
     }
   }
 
-  const fetchTrainingStatus = async (profileId: string) => {
+  const fetchTrainingStatus = async (profileId: string): Promise<any> => {
     try {
       const response = await fetch(`/api/brand-profiles/${profileId}/train`)
       const data = await response.json()
       if (response.ok) {
         setTraining(data.training)
+        return data.training
       }
     } catch (error) {
       // Might not have training yet, that's ok
     }
+    return null
   }
 
   const handleSubmit = async (data: any) => {
-    // Convert advanced form data to match database schema
     const payload = {
       name: data.name,
       description: data.description,
@@ -102,10 +115,10 @@ export default function BrandProfilesPage() {
       targetAudience: data.targetAudience,
       tone: data.tone || [],
       brandColors: data.brandColors || {},
-      // Store additional data in JSON fields for future use
       website: data.website,
       uniqueSellingProposition: data.uniqueSellingProposition,
       competitorChannels: data.competitorChannels || [],
+      inspirationChannels: data.inspirationChannels || [],
       contentPillars: data.contentPillars || [],
       contentTypeFocus: data.contentTypeFocus || [],
       targetKeywords: data.targetKeywords || [],
@@ -136,7 +149,6 @@ export default function BrandProfilesPage() {
         setEditingProfile(null)
 
         if (!editingProfile) {
-          // New profile created, select it
           setSelectedProfile(responseData.profile)
           setCurrentView('detail')
         }
@@ -197,7 +209,7 @@ export default function BrandProfilesPage() {
 
       if (response.ok) {
         fetchAssets(selectedProfile.id)
-        fetchProfiles() // Update asset count
+        fetchProfiles()
       } else {
         const data = await response.json()
         alert(data.error || 'Failed to upload file')
@@ -224,8 +236,7 @@ export default function BrandProfilesPage() {
 
       if (response.ok) {
         setTraining(data.training)
-        fetchProfiles() // Update status
-        // Poll for training status
+        fetchProfiles()
         const pollInterval = setInterval(() => {
           fetchTrainingStatus(selectedProfile.id).then(t => {
             setTraining(t)
@@ -254,399 +265,841 @@ export default function BrandProfilesPage() {
 
   const getStatusBadge = (status: string, progress?: number) => {
     const statusConfig = {
-      DRAFT: { color: 'bg-gray-100 text-gray-700', label: 'Draft' },
-      TRAINING: { color: 'bg-blue-100 text-blue-700', label: `Training ${progress || 0}%` },
-      READY: { color: 'bg-green-100 text-green-700', label: 'Ready' },
-      ERROR: { color: 'bg-red-100 text-red-700', label: 'Error' }
+      DRAFT: {
+        color: 'bg-gray-100 text-gray-700 border-gray-200',
+        label: 'Draft',
+        icon: '📝'
+      },
+      TRAINING: {
+        color: 'bg-blue-50 text-blue-700 border-blue-200',
+        label: `Training ${progress || 0}%`,
+        icon: '🧠'
+      },
+      READY: {
+        color: 'bg-green-50 text-green-700 border-green-200',
+        label: 'Ready',
+        icon: '✨'
+      },
+      ERROR: {
+        color: 'bg-red-50 text-red-700 border-red-200',
+        label: 'Error',
+        icon: '⚠️'
+      }
     }
 
     const config = statusConfig[status as keyof typeof statusConfig]
     return (
       <span className={cn(
-        'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+        'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border',
         config.color
       )}>
+        <span>{config.icon}</span>
         {config.label}
       </span>
     )
   }
 
-  return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-claude-text mb-2">Brand Profiles</h1>
-          <p className="text-claude-text-secondary">
-            Create and manage multiple brand voices for different projects
-          </p>
-        </div>
-        <Button
-          onClick={() => {
-            setEditingProfile(null)
-            setCurrentView('create')
-          }}
-          className="bg-claude-accent hover:bg-claude-accent-hover"
-        >
-          + Create Profile
-        </Button>
-      </div>
+  const getIndustryIcon = (industry?: string) => {
+    const icons: Record<string, string> = {
+      'Technology': '💻',
+      'Fashion & Beauty': '👗',
+      'Fitness & Wellness': '💪',
+      'Education': '📚',
+      'Finance': '💰',
+      'Gaming': '🎮',
+      'Travel': '✈️',
+      'Food': '🍕'
+    }
+    return icons[industry || ''] || '🎨'
+  }
 
-      {/* Render different views based on currentView */}
+  const getIndustryGradient = (industry?: string) => {
+    const gradients: Record<string, string> = {
+      'Technology': 'from-blue-500 to-cyan-500',
+      'Fashion & Beauty': 'from-pink-500 to-rose-500',
+      'Fitness & Wellness': 'from-green-500 to-emerald-500',
+      'Education': 'from-purple-500 to-indigo-500',
+      'Finance': 'from-amber-500 to-yellow-500',
+      'Gaming': 'from-violet-500 to-purple-500',
+      'Travel': 'from-sky-500 to-blue-500',
+      'Food': 'from-orange-500 to-red-500'
+    }
+    return gradients[industry || ''] || 'from-gray-500 to-slate-500'
+  }
+
+  const handleProfileClick = (profile: BrandProfile) => {
+    setSelectedProfile(profile)
+    setCurrentView('detail')
+    fetchAssets(profile.id)
+    fetchTrainingStatus(profile.id)
+  }
+
+  const handleBackToList = () => {
+    setSelectedProfile(null)
+    setCurrentView('list')
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      {/* Header - Only show on list view */}
       {currentView === 'list' && (
-        <>
-          {/* Mobile Create Form Button */}
-          {profiles.length > 0 && (
-            <div className="md:hidden mb-6">
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-10 backdrop-blur-sm bg-white/90">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                  <span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
+                    Brand Profiles
+                  </span>
+                </h1>
+                <p className="text-gray-500 mt-1">
+                  Create and manage AI-powered brand voices for your content
+                </p>
+              </div>
               <Button
                 onClick={() => {
                   setEditingProfile(null)
                   setCurrentView('create')
                 }}
-                className="w-full bg-claude-accent hover:bg-claude-accent-hover"
+                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/20"
               >
-                + Create New Profile
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Create Profile
               </Button>
             </div>
-          )}
-
-          {/* Profiles List */}
-          {profiles.length === 0 ? (
-            <div className="bg-white rounded-lg border border-claude-border p-8 sm:p-12 text-center">
-              <div className="text-4xl sm:text-6xl mb-4">🎨</div>
-              <h3 className="text-lg sm:text-xl font-bold text-claude-text mb-2">No Brand Profiles Yet</h3>
-              <p className="text-sm sm:text-base text-claude-text-secondary mb-6 max-w-md mx-auto">
-                Create your first brand profile to train the AI with your unique voice and style
-              </p>
-              <Button
-                onClick={() => setCurrentView('create')}
-                className="bg-claude-accent hover:bg-claude-accent-hover w-full sm:w-auto"
-              >
-                Create Your First Profile
-              </Button>
-            </div>
-          ) : (
-            <div className="grid lg:grid-cols-3 gap-4 lg:gap-6">
-              {/* Profiles List */}
-              <div className="lg:col-span-1 space-y-3 sm:space-y-4">
-                {profiles.map((profile) => (
-                  <Card
-                    key={profile.id}
-                    hoverable
-                    className={cn(
-                      'cursor-pointer transition-all',
-                      selectedProfile?.id === profile.id && 'border-claude-accent ring-2 ring-claude-accent/20'
-                    )}
-                    onClick={() => {
-                      setSelectedProfile(profile)
-                      setCurrentView('detail')
-                    }}
-                  >
-                    <CardContent className="p-3 sm:p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-claude-text text-sm sm:text-base truncate flex-1 mr-2">
-                          {profile.name}
-                        </h3>
-                        <div className="flex-shrink-0">
-                          {getStatusBadge(profile.status, profile.trainingProgress)}
-                        </div>
-                      </div>
-                      {profile.description && (
-                        <p className="text-xs sm:text-sm text-claude-text-secondary mb-2 line-clamp-2">
-                          {profile.description}
-                        </p>
-                      )}
-                      <div className="flex items-center justify-between text-xs text-claude-text-tertiary">
-                        <span>{profile._count.assets} assets</span>
-                        <span className="hidden sm:inline">
-                          {new Date(profile.updatedAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Empty State for Detail View */}
-              <div className="lg:col-span-2">
-                <div className="w-full max-w-md mx-auto">
-                  <Card>
-                    <CardContent className="p-8 sm:p-12 text-center">
-                      <div className="text-4xl sm:text-6xl mb-4">👈</div>
-                      <h3 className="text-lg sm:text-xl font-bold text-claude-text mb-2">Select a Profile</h3>
-                      <p className="text-sm sm:text-base text-claude-text-secondary">
-                        Choose a brand profile from the list to view and manage details
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </div>
-          )}
-        </>
+          </div>
+        </div>
       )}
 
-      {/* Create/Edit View */}
-      {(currentView === 'create' || currentView === 'edit') && (
-        <AdvancedBrandProfileForm
-          initialData={editingProfile}
-          onSave={handleSubmit}
-          onCancel={() => {
-            setCurrentView('list')
-            setEditingProfile(null)
-          }}
-          isEdit={!!editingProfile}
-        />
-      )}
-
-      {/* Detail View */}
-      {currentView === 'detail' && selectedProfile && (
-        <div className="space-y-4 sm:space-y-6">
-          {/* Back Navigation */}
-          <button
-            onClick={() => setCurrentView('list')}
-            className="flex items-center gap-2 text-claude-text-secondary hover:text-claude-text transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Profiles
-          </button>
-
-          {/* Profile Header */}
-          <Card>
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
-                <div className="flex-1">
-                  <h2 className="text-xl sm:text-2xl font-bold text-claude-text mb-2">
-                    {selectedProfile.name}
-                  </h2>
-                  {selectedProfile.description && (
-                    <p className="text-claude-text-secondary mb-4">
-                      {selectedProfile.description}
-                    </p>
-                  )}
-                  {getStatusBadge(selectedProfile.status, selectedProfile.trainingProgress)}
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* List View */}
+        {currentView === 'list' && (
+          <>
+            {/* Create Your First Brand Profile Section - Only show when no profiles exist */}
+            {profiles.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 mb-8">
+                <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center mb-4">
+                  <span className="text-4xl">🎨</span>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleEdit(selectedProfile)}
-                    size="sm"
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleDelete(selectedProfile.id)}
-                    className="text-red-600 hover:text-red-700"
-                    size="sm"
-                  >
-                    Delete
-                  </Button>
-                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Create Your First Brand Profile</h3>
+                <p className="text-gray-500 text-center max-w-md mb-6">
+                  Train the AI with your unique voice and style to generate personalized content
+                </p>
+                <Button
+                  onClick={() => {
+                    setEditingProfile(null)
+                    setCurrentView('create')
+                  }}
+                  className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/20"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Create New Profile
+                </Button>
               </div>
+            )}
 
-              {/* Training Section */}
-              <div className="border-t border-claude-border pt-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-                  <h3 className="font-semibold text-claude-text">Voice Training</h3>
-                  {selectedProfile.status === 'READY' && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-green-600">
-                        ✓ Trained on {new Date(selectedProfile.lastTrainedAt!).toLocaleDateString()}
-                      </span>
-                      <span className="text-xs bg-claude-accent-light text-claude-accent px-2 py-1 rounded-full">
-                        DeepSeek Model
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Training Status Message */}
-                {selectedProfile.status === 'TRAINING' && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="animate-spin w-4 h-4 border-2 border-claude-accent border-t-transparent rounded-full"></div>
-                      <p className="text-sm text-claude-text-secondary">
-                        Training AI voice model with {assets.filter(a => a.fileType !== 'IMAGE').length} documents...
-                      </p>
-                    </div>
-                    <div className="w-full bg-claude-bg-secondary rounded-full h-3">
-                      <div
-                        className="bg-claude-accent h-3 rounded-full transition-all duration-500"
-                        style={{ width: `${selectedProfile.trainingProgress}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-claude-text-tertiary">
-                      {selectedProfile.trainingProgress}% Complete - Analyzing brand voice patterns...
-                    </p>
-                  </div>
-                )}
-
-                {selectedProfile.status === 'ERROR' && (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <div className="flex items-start gap-2">
-                      <span className="text-red-600 text-lg">⚠️</span>
-                      <div>
-                        <p className="text-sm text-red-800 font-medium">Training Failed</p>
-                        <p className="text-xs text-red-600 mt-1">
-                          Please check your assets and try again. Make sure you have text-based documents (PDF, DOCX, TXT).
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Ready State with Voice Model Info */}
-                {selectedProfile.status === 'READY' && training && (
-                  <div className="space-y-3">
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <span className="text-green-600 text-lg">✨</span>
-                        <div className="flex-1">
-                          <p className="text-sm text-green-800 font-medium">Voice Model Ready!</p>
-                          <p className="text-xs text-green-600 mt-1">
-                            Your brand voice has been successfully trained and can now be used in content generation tools.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Voice Model Details */}
-                    {training.vectorEmbeddings && (
-                      <div className="p-3 bg-claude-bg-secondary rounded-lg">
-                        <p className="text-xs font-medium text-claude-text mb-2">Voice Model Insights:</p>
-                        <div className="space-y-1">
-                          <p className="text-xs text-claude-text-secondary">
-                            • Model: {training.vectorEmbeddings.model}
-                          </p>
-                          <p className="text-xs text-claude-text-secondary">
-                            • Analyzed content: {training.vectorEmbeddings.textLength || 'N/A'} characters
-                          </p>
-                          <p className="text-xs text-claude-text-secondary">
-                            • Training tokens: {training.vectorEmbeddings.tokensUsed || 'N/A'}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Train/Retrain Buttons */}
-                {(selectedProfile.status === 'DRAFT' || selectedProfile.status === 'ERROR') && (
-                  <div className="mt-4">
-                    <Button
-                      onClick={handleTrain}
-                      disabled={assets.filter(a => a.fileType !== 'IMAGE').length === 0}
-                      className="w-full sm:w-auto"
-                    >
-                      <span className="flex items-center gap-2">
-                        <span>🧠</span>
-                        Train Voice Model
-                      </span>
-                    </Button>
-                    {assets.filter(a => a.fileType !== 'IMAGE').length === 0 && (
-                      <p className="text-xs text-claude-text-tertiary mt-2">
-                        Upload text-based documents (PDF, DOCX, TXT) to enable voice training
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {selectedProfile.status === 'READY' && (
-                  <div className="mt-4 flex gap-3">
-                    <Button
-                      onClick={handleTrain}
-                      variant="outline"
-                      className="flex-1 sm:flex-none"
-                    >
-                      <span className="flex items-center gap-2">
-                        <span>🔄</span>
-                        Retrain Model
-                      </span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="flex-1 sm:flex-none"
-                    >
-                      <span className="flex items-center gap-2">
-                        <span>📊</span>
-                        View Analytics
-                      </span>
-                    </Button>
-                  </div>
-                )}
+            {/* Divider - Only show when there are profiles */}
+            {profiles.length > 0 && (
+              <div className="flex items-center gap-4 my-8">
+                <div className="flex-1 h-px bg-gray-200"></div>
+                <span className="text-sm font-medium text-gray-400">Your Profiles</span>
+                <div className="flex-1 h-px bg-gray-200"></div>
               </div>
-            </CardContent>
-          </Card>
+            )}
 
-          {/* Assets Section */}
-          <Card>
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                <h3 className="font-semibold text-claude-text">
-                  Assets ({assets.length})
-                </h3>
-                <label className="cursor-pointer w-full sm:w-auto">
-                  <Button
-                    variant="outline"
-                    disabled={uploadingFile}
-                    className="w-full sm:w-auto"
-                    asChild
-                  >
-                    <span>
-                      {uploadingFile ? 'Uploading...' : 'Upload Assets'}
-                    </span>
-                  </Button>
-                  <input
-                    type="file"
-                    multiple
-                    accept=".pdf,.docx,.txt,.jpg,.jpeg,.png,.gif,.webp"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                </label>
-              </div>
+            {/* Your Brand Profiles Section */}
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                <span className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg flex items-center justify-center text-white text-sm">
+                  {profiles.length}
+                </span>
+                Your Brand Profiles
+              </h3>
 
-              {assets.length === 0 ? (
-                <div className="text-center py-6 sm:py-8">
-                  <div className="text-3xl sm:text-4xl mb-3">📁</div>
-                  <p className="text-claude-text-secondary mb-2 text-sm sm:text-base">No assets uploaded</p>
-                  <p className="text-xs sm:text-sm text-claude-text-tertiary">
-                    Upload PDFs, DOCX, TXT files, and images to train your brand voice
-                  </p>
+              {profiles.length === 0 ? (
+                <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl">
+                  <p className="text-gray-400">No profiles created yet. Create your first profile above!</p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {assets.map((asset) => (
+                <div className="flex flex-wrap gap-6 justify-center sm:justify-start">
+                  {profiles.map((profile) => (
                     <div
-                      key={asset.id}
-                      className="flex items-center justify-between p-3 border border-claude-border rounded-lg hover:bg-claude-bg-secondary transition-colors"
+                      key={profile.id}
+                      onClick={() => handleProfileClick(profile)}
+                      className="group cursor-pointer transition-all duration-300"
                     >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <span className="text-xl sm:text-2xl flex-shrink-0">
-                          {asset.fileType === 'PDF' && '📄'}
-                          {asset.fileType === 'DOCX' && '📝'}
-                          {asset.fileType === 'TXT' && '📃'}
-                          {asset.fileType === 'IMAGE' && '🖼️'}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-claude-text truncate">
-                            {asset.originalName}
-                          </p>
-                          <p className="text-xs text-claude-text-tertiary">
-                            {formatFileSize(asset.fileSize)} • {asset.fileType}
-                          </p>
+                      {/* Circular Profile Card */}
+                      <div className="relative">
+                        {/* Profile Circle */}
+                        <div className={cn(
+                          'w-28 h-28 rounded-full flex items-center justify-center text-4xl shadow-lg',
+                          'bg-gradient-to-br transition-all duration-300',
+                          getIndustryGradient(profile.industry),
+                          'group-hover:scale-110 group-hover:shadow-xl'
+                        )}>
+                          {getIndustryIcon(profile.industry)}
                         </div>
+
+                        {/* Status Badge */}
+                        <div className="absolute -bottom-1 -right-1">
+                          {profile.status === 'READY' && (
+                            <div className="w-7 h-7 bg-green-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg">
+                              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          )}
+                          {profile.status === 'TRAINING' && (
+                            <div className="w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg">
+                              <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                          )}
+                          {profile.status === 'DRAFT' && (
+                            <div className="w-7 h-7 bg-gray-400 rounded-full flex items-center justify-center border-2 border-white shadow-lg">
+                              <span className="text-white text-xs">📝</span>
+                            </div>
+                          )}
+                          {profile.status === 'ERROR' && (
+                            <div className="w-7 h-7 bg-red-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg">
+                              <span className="text-white text-xs">⚠️</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Hover Ring */}
+                        <div className={cn(
+                          'absolute inset-0 rounded-full border-2 border-transparent transition-all duration-300',
+                          'group-hover:border-amber-500 group-hover:scale-125'
+                        )}></div>
+                      </div>
+
+                      {/* Profile Name */}
+                      <div className="text-center mt-3">
+                        <h4 className="text-sm font-semibold text-gray-900 group-hover:text-amber-600 transition-colors truncate max-w-[120px] mx-auto">
+                          {profile.name}
+                        </h4>
+                        {profile.industry && (
+                          <p className="text-xs text-gray-400 truncate max-w-[120px] mx-auto">{profile.industry}</p>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            </div>
+
+            {/* Demo Profiles Section - Always Show */}
+            <div className="border-t border-gray-200 pt-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                <span className="text-sm px-2 py-0.5 bg-purple-100 text-purple-600 rounded-full">Demo</span>
+                Example Brand Profiles
+                <span className="text-xs font-normal text-gray-400 ml-2">(Click to explore)</span>
+              </h3>
+
+              <div className="flex flex-wrap gap-6 justify-center sm:justify-start">
+                {/* TechFluencer Demo Profile */}
+                <div
+                  onClick={() => handleProfileClick({
+                    id: 'demo-tech-influencer-profile',
+                    name: 'TechFluencer',
+                    description: 'A tech content creator focused on making complex technology accessible to everyone.',
+                    industry: 'Technology',
+                    targetAudience: 'Tech enthusiasts aged 18-35, early adopters, developers, and professionals.',
+                    tone: ['Professional', 'Friendly', 'Educational', 'Engaging', 'Authentic'],
+                    status: 'READY',
+                    trainingProgress: 100,
+                    lastTrainedAt: new Date().toISOString(),
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    website: 'https://youtube.com/@techfluencer',
+                    uniqueSellingProposition: 'Breaking down complex tech concepts into simple, relatable content.',
+                    competitorChannels: ['https://youtube.com/@techcompetitor1', 'https://youtube.com/@techcompetitor2'],
+                    inspirationChannels: ['https://youtube.com/@techinspiration1', 'https://youtube.com/@techinspiration2'],
+                    contentPillars: ['Web Development', 'AI & Machine Learning', 'Career Advice'],
+                    contentTypeFocus: ['Quick Tips (60 seconds)', 'In-depth Tutorials (10-15 min)', 'Tech Explainers'],
+                    targetKeywords: ['web development', 'react', 'nextjs', 'typescript', 'ai development'],
+                    communicationStyle: 'Clear, concise, and example-driven. Uses analogies to explain complex concepts.',
+                    formality: 'casual',
+                    emotionalTone: 'Enthusiastic and encouraging',
+                    complexity: 'moderate',
+                    callToActionStyle: 'direct',
+                    _count: { assets: 3 }
+                  } as BrandProfile)}
+                  className="group cursor-pointer transition-all duration-300"
+                >
+                  {/* Circular Profile Card */}
+                  <div className="relative">
+                    {/* Profile Circle */}
+                    <div className={cn(
+                      'w-28 h-28 rounded-full flex items-center justify-center text-4xl shadow-lg',
+                      'bg-gradient-to-br from-blue-500 to-cyan-500',
+                      'transition-all duration-300',
+                      'group-hover:scale-110 group-hover:shadow-xl'
+                    )}>
+                      💻
+                    </div>
+
+                    {/* Status Badge */}
+                    <div className="absolute -bottom-1 -right-1">
+                      <div className="w-7 h-7 bg-green-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    </div>
+
+                    {/* Hover Ring */}
+                    <div className={cn(
+                      'absolute inset-0 rounded-full border-2 border-transparent transition-all duration-300',
+                      'group-hover:border-amber-500 group-hover:scale-125'
+                    )}></div>
+                  </div>
+
+                  {/* Profile Name */}
+                  <div className="text-center mt-3">
+                    <h4 className="text-sm font-semibold text-gray-900 group-hover:text-amber-600 transition-colors truncate max-w-[120px] mx-auto">
+                      TechFluencer
+                    </h4>
+                    <p className="text-xs text-gray-400 truncate max-w-[120px] mx-auto">Technology</p>
+                  </div>
+                </div>
+
+                {/* Fitness Demo Profile */}
+                <div
+                  className="group cursor-pointer transition-all duration-300 opacity-60"
+                >
+                  <div className="relative">
+                    <div className="w-28 h-28 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-4xl shadow-lg">
+                      💪
+                    </div>
+                    <div className="absolute -bottom-1 -right-1">
+                      <div className="w-7 h-7 bg-gray-400 rounded-full flex items-center justify-center border-2 border-white shadow-lg">
+                        <span className="text-white text-xs">🔒</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-center mt-3">
+                    <h4 className="text-sm font-semibold text-gray-500 truncate max-w-[120px] mx-auto">FitCoach</h4>
+                    <p className="text-xs text-gray-400 truncate max-w-[120px] mx-auto">Coming Soon</p>
+                  </div>
+                </div>
+
+                {/* Fashion Demo Profile */}
+                <div
+                  className="group cursor-pointer transition-all duration-300 opacity-60"
+                >
+                  <div className="relative">
+                    <div className="w-28 h-28 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center text-4xl shadow-lg">
+                      👗
+                    </div>
+                    <div className="absolute -bottom-1 -right-1">
+                      <div className="w-7 h-7 bg-gray-400 rounded-full flex items-center justify-center border-2 border-white shadow-lg">
+                        <span className="text-white text-xs">🔒</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-center mt-3">
+                    <h4 className="text-sm font-semibold text-gray-500 truncate max-w-[120px] mx-auto">StyleGuru</h4>
+                    <p className="text-xs text-gray-400 truncate max-w-[120px] mx-auto">Coming Soon</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Create/Edit View */}
+        {(currentView === 'create' || currentView === 'edit') && (
+          <div className="max-w-4xl mx-auto">
+            <div className="mb-6">
+              <button
+                onClick={() => {
+                  setCurrentView('list')
+                  setEditingProfile(null)
+                }}
+                className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to Profiles
+              </button>
+            </div>
+            <AdvancedBrandProfileForm
+              initialData={editingProfile}
+              onSave={handleSubmit}
+              onCancel={() => {
+                setCurrentView('list')
+                setEditingProfile(null)
+              }}
+              isEdit={!!editingProfile}
+            />
+          </div>
+        )}
+
+        {/* Detail View */}
+        {currentView === 'detail' && selectedProfile && (
+          <div className="max-w-5xl mx-auto">
+            {/* Back Button Header */}
+            <div className="bg-white border-b border-gray-200 sticky top-0 z-10 backdrop-blur-sm bg-white/90 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-4 mb-6">
+              <button
+                onClick={handleBackToList}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to Profiles
+              </button>
+            </div>
+
+            <div className="space-y-6">
+            {/* Profile Header Card */}
+            <Card variant="elevated">
+              <CardContent className="px-6 py-6">
+                {/* Profile Info */}
+                <div className="mb-6">
+                  <div className="flex items-start gap-4">
+                    <div className={cn(
+                      "w-20 h-20 rounded-2xl shadow-lg flex items-center justify-center text-4xl bg-gradient-to-br",
+                      getIndustryGradient(selectedProfile.industry)
+                    )}>
+                      {getIndustryIcon(selectedProfile.industry)}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                            {selectedProfile.name}
+                          </h2>
+                          {selectedProfile.description && (
+                            <p className="text-gray-500 text-sm max-w-2xl">
+                              {selectedProfile.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(selectedProfile)}
+                          >
+                            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(selectedProfile.id)}
+                            className="text-red-600 border-red-200 hover:bg-red-50"
+                          >
+                            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 mt-3">
+                        {getStatusBadge(selectedProfile.status, selectedProfile.trainingProgress)}
+                        {selectedProfile.industry && (
+                          <span className="inline-flex items-center px-2.5 py-1 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium">
+                            {selectedProfile.industry}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Grid Layout for Profile Details */}
+            <div className="grid lg:grid-cols-3 gap-6">
+              {/* Column 1: Basic Info & Content Strategy */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Basic Brand Information */}
+                <Card>
+                  <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-blue-100">
+                    <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                      <span>🎯</span>
+                      Basic Information
+                    </h3>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {selectedProfile.targetAudience && (
+                        <div>
+                          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1">
+                            <span>👥</span> Target Audience
+                          </label>
+                          <p className="text-sm text-gray-700 mt-2">{selectedProfile.targetAudience}</p>
+                        </div>
+                      )}
+                      {selectedProfile.website && (
+                        <div>
+                          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1">
+                            <span>🌐</span> Website
+                          </label>
+                          <a href={selectedProfile.website} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline mt-2 block">
+                            {selectedProfile.website}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                    {selectedProfile.uniqueSellingProposition && (
+                      <div className="mt-4">
+                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1">
+                          <span>⭐</span> Unique Selling Proposition
+                        </label>
+                        <p className="text-sm text-gray-700 leading-relaxed mt-2">{selectedProfile.uniqueSellingProposition}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Content Strategy */}
+                {((selectedProfile.contentPillars && selectedProfile.contentPillars.length > 0) ||
+                  (selectedProfile.contentTypeFocus && selectedProfile.contentTypeFocus.length > 0) ||
+                  (selectedProfile.targetKeywords && selectedProfile.targetKeywords.length > 0)) && (
+                  <Card>
+                    <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100">
+                      <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <span>📝</span>
+                        Content Strategy
+                      </h3>
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-4">
+                      {selectedProfile.contentPillars && selectedProfile.contentPillars.length > 0 && (
+                        <div>
+                          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1">
+                            <span>📌</span> Content Pillars
+                          </label>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {selectedProfile.contentPillars.map((pillar, i) => (
+                              <span key={i} className="text-xs px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg font-medium">
+                                {pillar}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedProfile.contentTypeFocus && selectedProfile.contentTypeFocus.length > 0 && (
+                        <div>
+                          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1">
+                            <span>🎬</span> Content Types
+                          </label>
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {selectedProfile.contentTypeFocus.map((type, i) => (
+                              <span key={i} className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-md">
+                                {type}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedProfile.targetKeywords && selectedProfile.targetKeywords.length > 0 && (
+                        <div>
+                          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1">
+                            <span>🎯</span> Target Keywords
+                          </label>
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {selectedProfile.targetKeywords.map((keyword, i) => (
+                              <span key={i} className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded-md">
+                                #{keyword}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Voice & Tone */}
+                <Card className="border-2 border-amber-300">
+                  <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <span>🎙️</span>
+                        Voice & Tone
+                      </h3>
+                      <span className="px-2 py-0.5 bg-amber-500 text-white text-xs font-bold rounded-full">
+                        AI CORE
+                      </span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-4 space-y-4">
+                    {selectedProfile.tone && selectedProfile.tone.length > 0 && (
+                      <div>
+                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1">
+                          <span>🎨</span> Brand Tone Attributes
+                        </label>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {selectedProfile.tone.map((t, i) => (
+                            <span key={i} className="text-xs px-3 py-1.5 bg-amber-100 text-amber-800 rounded-lg font-semibold">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedProfile.communicationStyle && (
+                      <div>
+                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1">
+                          <span>💬</span> Communication Style
+                        </label>
+                        <p className="text-sm text-gray-700 leading-relaxed mt-2">{selectedProfile.communicationStyle}</p>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-3 gap-3">
+                      {selectedProfile.formality && (
+                        <div>
+                          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Formality</label>
+                          <p className="text-sm text-gray-700 font-medium capitalize mt-1">{selectedProfile.formality}</p>
+                        </div>
+                      )}
+                      {selectedProfile.complexity && (
+                        <div>
+                          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Complexity</label>
+                          <p className="text-sm text-gray-700 font-medium capitalize mt-1">{selectedProfile.complexity}</p>
+                        </div>
+                      )}
+                      {selectedProfile.callToActionStyle && (
+                        <div>
+                          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">CTA Style</label>
+                          <p className="text-sm text-gray-700 font-medium capitalize mt-1">{selectedProfile.callToActionStyle}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedProfile.emotionalTone && (
+                      <div>
+                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1">
+                          <span>😊</span> Emotional Tone
+                        </label>
+                        <p className="text-sm text-gray-700 mt-2">{selectedProfile.emotionalTone}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Competitive Analysis */}
+                {(selectedProfile.competitorChannels && selectedProfile.competitorChannels.length > 0) ||
+                 (selectedProfile.inspirationChannels && selectedProfile.inspirationChannels.length > 0) ? (
+                  <Card>
+                    <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50 border-b border-orange-100">
+                      <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <span>🎥</span>
+                        Saved YouTube Channels
+                      </h3>
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-6">
+                      {/* Competitor Channels */}
+                      {selectedProfile.competitorChannels && selectedProfile.competitorChannels.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-3">
+                            <span className="inline-block w-3 h-3 rounded-full bg-orange-500"></span>
+                            Competitor Channels ({selectedProfile.competitorChannels.length})
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {selectedProfile.competitorChannels.map((channel, i) => (
+                              <ChannelCard
+                                key={i}
+                                channel={{ url: channel }}
+                                type="competitor"
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Inspiration Channels */}
+                      {selectedProfile.inspirationChannels && selectedProfile.inspirationChannels.length > 0 && (
+                        <div className={selectedProfile.competitorChannels && selectedProfile.competitorChannels.length > 0 ? 'pt-4 border-t border-gray-100' : ''}>
+                          <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-3">
+                            <span className="inline-block w-3 h-3 rounded-full bg-purple-500"></span>
+                            Inspiration Channels ({selectedProfile.inspirationChannels.length})
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {selectedProfile.inspirationChannels.map((channel, i) => (
+                              <ChannelCard
+                                key={i}
+                                channel={{ url: channel }}
+                                type="inspiration"
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ) : null}
+              </div>
+
+              {/* Column 2: Training & Assets */}
+              <div className="space-y-6">
+                {/* Training Section */}
+                <Card>
+                  <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100">
+                    <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                      <span>🧠</span>
+                      Voice Training
+                    </h3>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                  {selectedProfile.status === 'READY' && training && (
+                    <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-green-900 mb-1">Voice Model Ready!</p>
+                          <p className="text-xs text-green-600 mb-3">
+                            Your brand voice has been successfully trained and can now be used in content generation tools.
+                          </p>
+                          {selectedProfile.lastTrainedAt && (
+                            <p className="text-xs text-green-600">
+                              Trained on {new Date(selectedProfile.lastTrainedAt).toLocaleDateString()} with DeepSeek AI
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleTrain}
+                          className="border-green-300 text-green-700 hover:bg-green-50"
+                        >
+                          <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Retrain
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedProfile.status === 'TRAINING' && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                        <p className="text-sm font-medium text-blue-900">
+                          Training AI voice model with {assets.filter(a => a.fileType !== 'IMAGE').length} documents...
+                        </p>
+                      </div>
+                      <div className="w-full bg-blue-200 rounded-full h-2 mb-2">
+                        <div
+                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500"
+                          style={{ width: `${selectedProfile.trainingProgress}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-blue-600">
+                        {selectedProfile.trainingProgress}% Complete - Analyzing brand voice patterns...
+                      </p>
+                    </div>
+                  )}
+
+                  {(selectedProfile.status === 'DRAFT' || selectedProfile.status === 'ERROR') && (
+                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
+                      <p className="text-sm text-gray-600 mb-3">
+                        {selectedProfile.status === 'ERROR'
+                          ? 'Training failed. Please check your assets and try again.'
+                          : 'Upload text-based documents (PDF, DOCX, TXT) to train your brand voice model.'}
+                      </p>
+                      <Button
+                        onClick={handleTrain}
+                        disabled={assets.filter(a => a.fileType !== 'IMAGE').length === 0}
+                        size="sm"
+                        className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
+                      >
+                        Train Voice Model
+                      </Button>
+                    </div>
+                  )}
+                  </CardContent>
+                </Card>
+
+                {/* Assets Card */}
+                <Card>
+              <CardHeader className="bg-gray-50 border-b border-gray-200 p-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                    <span>📁</span>
+                    Assets ({assets.length})
+                  </h3>
+                  <label className="cursor-pointer">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={uploadingFile}
+                      className="text-xs"
+                    >
+                      {uploadingFile ? 'Uploading...' : '+ Upload'}
+                    </Button>
+                    <input
+                      type="file"
+                      multiple
+                      accept=".pdf,.docx,.txt,.jpg,.jpeg,.png,.gif,.webp"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </CardHeader>
+
+              <CardContent className="p-3">
+                {assets.length === 0 ? (
+                  <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg">
+                    <p className="text-xs text-gray-400">No assets uploaded</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                    {assets.map((asset) => (
+                      <div
+                        key={asset.id}
+                        className="flex items-center gap-2 p-2 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <div className="w-8 h-8 bg-white rounded flex items-center justify-center text-base shadow-sm">
+                          {asset.fileType === 'PDF' && '📄'}
+                          {asset.fileType === 'DOCX' && '📝'}
+                          {asset.fileType === 'TXT' && '📃'}
+                          {asset.fileType === 'IMAGE' && '🖼️'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-gray-900 truncate">
+                            {asset.originalName}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatFileSize(asset.fileSize)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+              </div>
+            </div>
+            </div>
+          </div>
+        )}
+      </div>
+
     </div>
   )
 }

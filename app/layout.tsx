@@ -1,5 +1,6 @@
 import './globals.css'
 import type { Metadata } from 'next'
+import AuthStateHandler from '@/components/auth/AuthStateHandler'
 
 export const metadata: Metadata = {
   title: 'BrandVoice AI',
@@ -13,7 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <AuthStateHandler />
+        {children}
+      </body>
     </html>
   )
 }

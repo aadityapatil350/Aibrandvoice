@@ -1,4 +1,5 @@
 import Hero from '@/components/landing/Hero'
+import BrandProfiles from '@/components/landing/BrandProfiles'
 import Platforms from '@/components/landing/Platforms'
 import Features from '@/components/landing/Features'
 import HowItWorks from '@/components/landing/HowItWorks'
@@ -12,6 +13,7 @@ export default function Home() {
   return (
     <main className="min-h-screen">
       <Hero />
+      <BrandProfiles />
       <Platforms />
       <Features />
       <HowItWorks />
